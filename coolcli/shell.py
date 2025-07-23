@@ -1,77 +1,81 @@
 import os
-from prompt_toolkit import PromptSession
-from prompt_toolkit.styles import Style
 from rich.console import Console
-from rich.panel import Panel
 from rich.text import Text
 from coolcli.banner import print_banner
 from coolcli.commands import handle_command
+from coolcli.panels import user_input_panel
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import InMemoryHistory
 
 console = Console()
-history = []
+history_renderables = []
 
 def clear_terminal():
     os.system("cls" if os.name == "nt" else "clear")
 
 def main():
-    style = Style.from_dict({
-        "prompt": "bold cyan",
-        "": "white"
-    })
-    session = PromptSession()
+    cli_history = InMemoryHistory()
+    session = PromptSession(history=cli_history)
 
+    # One-time welcome
     clear_terminal()
     print_banner(console)
-    # Initial dummy panel
-    console.print(Panel("[bold white]Welcome to [magenta]SaxoFlow CLI[/magenta][/bold white]", border_style="magenta"))
+    panel_width = int(console.width * 0.75)
+    console.print(user_input_panel("Welcome to SaxoFlow CLI! Take your first step toward mastering digital design and verification.", width=panel_width))
+
+    # Startup tips (Text, left-aligned)
+    tips = Text(
+        "Tips for getting started:\n"
+        "1. Ask questions, edit files, or run commands.\n"
+        "2. Be specific for the best results.\n"
+        "3. Use /help to see available commands.\n"
+        "4. Type /exit to quit the CLI.\n",
+        style="violet"
+    )
+    console.print(tips)
+    console.print("")  # spacer
 
     while True:
-        # Print full history (as Rich panels)
-        for user_panel, response_panel in history:
-            console.print(user_panel)
-            if response_panel:
-                console.print(response_panel)
+        # Print history (user panel + output)
+        panel_width = int(console.width * 0.75)  # recalc in case window size changed
+        for upanel, opanel in history_renderables:
+            # Ensure all input panels are correct width
+            if hasattr(upanel, "width"):
+                upanel.width = panel_width
+            console.print(upanel)
+            if opanel:
+                console.print(opanel)
+            console.print("")  # space between interactions
 
-        # Input at the bottom
-        user_input = session.prompt("> ", style=style)
+        try:
+            user_input = session.prompt("> ")
+        except (EOFError, KeyboardInterrupt):
+            console.print("[bold green]Goodbye![/bold green]")
+            break
+
         user_input = user_input.strip()
         if not user_input:
+            clear_terminal()
+            print_banner(console)
+            panel_width = int(console.width * 0.75)
+            console.print(user_input_panel("Welcome to SaxoFlow CLI! Take your first step toward mastering digital design and verification.", width=panel_width))
+            console.print(tips)
+            console.print("")
             continue
 
-        # User input as panel
-        user_panel = Panel(
-            Text(user_input, style="bold cyan"),
-            border_style="bright_blue",
-            title="saxoflow",
-            title_align="left",
-            padding=(0, 1)
-        )
-
-        # Get response as panel (from handle_command)
-        from io import StringIO
-        temp_out = StringIO()
-        local_console = Console(file=temp_out, force_terminal=True, color_system="truecolor", width=100)
-        handle_command(user_input, local_console)
-        output_text = temp_out.getvalue().strip()
-        temp_out.close()
-
-        # Output panel only if output_text
-        response_panel = None
-        if output_text:
-            response_panel = Panel(
-                output_text,
-                border_style="yellow" if "Unknown command" in output_text else "green",
-                padding=(0, 1)
-            )
-
-        # Save both to history
-        history.append((user_panel, response_panel))
+        upanel = user_input_panel(user_input, width=panel_width)
+        opanel = handle_command(user_input, console)
+        history_renderables.append((upanel, opanel))
 
         if user_input in ["/quit", "/exit"]:
             console.print("[bold green]Goodbye![/bold green]")
             break
 
-        # Prepare next prompt (clear and print history again)
+        # Clear and redraw everything
         clear_terminal()
         print_banner(console)
-        console.print(Panel("[bold white]Welcome to [magenta]SaxoFlow CLI[/magenta][/bold white]", border_style="magenta"))
+        panel_width = int(console.width * 0.75)
+        console.print(user_input_panel("Welcome to SaxoFlow CLI! Take your first step toward mastering digital design and verification.", width=panel_width))
+        console.print(tips)
+        console.print("")
+
