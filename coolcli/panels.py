@@ -9,7 +9,7 @@ def user_input_panel(command: str, width: int = None) -> Panel:
         kwargs["width"] = width
     return Panel(
         Text(f"> {command}", style="bold white"),
-        border_style="cyan",
+        border_style="rgb(135,206,235)",  # Sky Blue
         title="saxoflow",
         title_align="left",
         padding=(0, 1),
@@ -17,7 +17,7 @@ def user_input_panel(command: str, width: int = None) -> Panel:
         **kwargs
     )
 
-def output_panel(renderable, border_style="cyan", icon=None) -> Panel:
+def output_panel(renderable, border_style="light cyan", icon=None) -> Panel:
     """
     Wraps output (can be Text, Markdown, etc.) in a styled panel.
     Optionally adds an icon in the title.
@@ -47,12 +47,12 @@ def error_panel(message: str) -> Panel:
 
 def ai_panel(renderable) -> Panel:
     """
-    For future: panel for AI/assistant output.
+    Panel for AI/assistant output with a violet-colored border.
     """
     return Panel(
         renderable,
-        border_style="magenta",
-        title="🤖 ai agent",
+        border_style="violet", 
+        title="ai_buddy",
         title_align="left",
         padding=(1, 2),
         expand=True
